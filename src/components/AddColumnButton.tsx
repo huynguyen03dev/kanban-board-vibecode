@@ -73,10 +73,10 @@ export const AddColumnButton = ({ onAddColumn }: AddColumnButtonProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Card className="w-full lg:w-80 min-w-[280px] h-fit border-2 border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
+        <Card className="w-full lg:w-80 min-w-[280px] h-fit border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
           <CardContent className="p-6 flex flex-col items-center justify-center min-h-[200px]">
-            <Plus className="h-8 w-8 text-gray-400 mb-2" />
-            <span className="text-gray-600 font-medium">Add Column</span>
+            <Plus className="h-8 w-8 text-muted-foreground mb-2" />
+            <span className="text-muted-foreground font-medium">Add Column</span>
           </CardContent>
         </Card>
       </DialogTrigger>
@@ -113,8 +113,8 @@ export const AddColumnButton = ({ onAddColumn }: AddColumnButtonProps) => {
                   onClick={() => setSelectedColor(color.value)}
                   className={`w-12 h-12 rounded-lg border-2 transition-all ${
                     selectedColor === color.value
-                      ? 'border-gray-900 scale-110'
-                      : 'border-gray-200 hover:border-gray-400'
+                      ? 'border-foreground scale-110'
+                      : 'border-border hover:border-muted-foreground'
                   }`}
                   style={{ backgroundColor: color.value }}
                   title={color.name}

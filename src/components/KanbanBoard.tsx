@@ -20,6 +20,7 @@ import { TaskCard } from './TaskCard';
 import { AddColumnButton } from './AddColumnButton';
 import { useKanbanBoard } from '@/hooks/useKanbanBoard';
 import { Task, Column } from '@/types/kanban';
+import { ThemeToggle } from './theme-toggle';
 
 export const KanbanBoard = () => {
   const {
@@ -141,18 +142,21 @@ export const KanbanBoard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-3 sm:p-6">
+      <div className="min-h-screen bg-background p-3 sm:p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-              Kanban Board
-            </h1>
-            <p className="text-sm sm:text-base text-gray-600">
-              Organize your tasks with drag and drop functionality
-            </p>
+          <div className="mb-6 sm:mb-8 flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+                Kanban Board
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Organize your tasks with drag and drop functionality
+              </p>
+            </div>
+            <ThemeToggle />
           </div>
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
         </div>
       </div>
@@ -160,26 +164,29 @@ export const KanbanBoard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-3 sm:p-6">
+    <div className="min-h-screen bg-background p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Kanban Board
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600">
-            Organize your tasks with drag and drop functionality
-          </p>
-          {error && (
-            <div className="mt-2 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-              {error}
-              <button
-                onClick={refetch}
-                className="ml-2 underline hover:no-underline"
-              >
-                Retry
-              </button>
-            </div>
-          )}
+        <div className="mb-6 sm:mb-8 flex justify-between items-start">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+              Kanban Board
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Organize your tasks with drag and drop functionality
+            </p>
+            {error && (
+              <div className="mt-2 p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded">
+                {error}
+                <button
+                  onClick={refetch}
+                  className="ml-2 underline hover:no-underline"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+          </div>
+          <ThemeToggle />
         </div>
 
         <DndContext

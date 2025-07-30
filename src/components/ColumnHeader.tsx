@@ -153,8 +153,8 @@ export const ColumnHeader = ({
                 onClick={() => setEditColor(color.value)}
                 className={`w-6 h-6 rounded border transition-all ${
                   editColor === color.value
-                    ? 'border-gray-900 scale-110'
-                    : 'border-gray-200 hover:border-gray-400'
+                    ? 'border-foreground scale-110'
+                    : 'border-border hover:border-muted-foreground'
                 }`}
                 style={{ backgroundColor: color.value }}
                 title={color.name}
@@ -203,7 +203,7 @@ export const ColumnHeader = ({
               size="sm"
               variant="ghost"
               onClick={() => setShowDeleteDialog(true)}
-              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+              className="h-6 w-6 p-0 text-destructive hover:text-destructive/80"
             >
               <Trash2 className="h-3 w-3" />
             </Button>
@@ -218,10 +218,10 @@ export const ColumnHeader = ({
           </DialogHeader>
           
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Are you sure you want to delete the "{column.name}" column?
               {column.tasks.length > 0 && (
-                <span className="block mt-2 text-red-600 font-medium">
+                <span className="block mt-2 text-destructive font-medium">
                   This column contains {column.tasks.length} task(s). Please move or delete all tasks before deleting the column.
                 </span>
               )}

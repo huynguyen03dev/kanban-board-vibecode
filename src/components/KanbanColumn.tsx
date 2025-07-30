@@ -155,7 +155,7 @@ export const KanbanColumn = ({
 
           {/* Empty state message */}
           {column.tasks.length === 0 && !isOver && (
-            <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
               No tasks yet
             </div>
           )}
@@ -195,7 +195,7 @@ export const KanbanColumn = ({
           ) : (
             <Button
               variant="ghost"
-              className="w-full border-2 border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-colors"
+              className="w-full border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-colors"
               onClick={() => setIsAddingTask(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
