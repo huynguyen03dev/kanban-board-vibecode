@@ -4,19 +4,37 @@ import { prisma } from '@/lib/prisma';
 // PUT /api/tasks/[id] - Update a task
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();
-    const { title, description, status } = body;
-    const { id } = params;
+    const { title, description, columnId, position } = body;
+    const { id } = await params;
+
+    // If moving to a different column, handle position logic
+    let updateData: any = {
+      ...(title !== undefined && { title }),
+      ...(description !== undefined && { description }),
+    };
+
+    if (columnId !== undefined) {
+      // If changing columns, get the highest position in the target column
+      const lastTask = await prisma.task.findFirst({
+        where: { columnId },
+        orderBy: { position: 'desc' },
+      });
+
+      updateData.columnId = columnId;
+      updateData.position = position !== undefined ? position : (lastTask ? lastTask.position + 1 : 0);
+    } else if (position !== undefined) {
+      updateData.position = position;
+    }
 
     const task = await prisma.task.update({
       where: { id },
-      data: {
-        ...(title !== undefined && { title }),
-        ...(description !== undefined && { description }),
-        ...(status !== undefined && { status }),
+      data: updateData,
+      include: {
+        column: true,
       },
     });
 
@@ -33,10 +51,10 @@ export async function PUT(
 // DELETE /api/tasks/[id] - Delete a task
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     await prisma.task.delete({
       where: { id },

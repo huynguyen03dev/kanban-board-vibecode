@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { TaskStatus } from '@prisma/client';
 
 // GET /api/tasks - Fetch all tasks
 export async function GET() {
   try {
     const tasks = await prisma.task.findMany({
-      orderBy: {
-        createdAt: 'asc',
+      include: {
+        column: true,
       },
+      orderBy: [
+        { column: { position: 'asc' } },
+        { position: 'asc' },
+      ],
     });
     return NextResponse.json(tasks);
   } catch (error) {
@@ -24,7 +27,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, description, status } = body;
+    const { title, description, columnId } = body;
 
     if (!title) {
       return NextResponse.json(
@@ -33,11 +36,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!columnId) {
+      return NextResponse.json(
+        { error: 'Column ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Get the highest position in the target column
+    const lastTask = await prisma.task.findFirst({
+      where: { columnId },
+      orderBy: { position: 'desc' },
+    });
+
+    const newPosition = lastTask ? lastTask.position + 1 : 0;
+
     const task = await prisma.task.create({
       data: {
         title,
         description: description || null,
-        status: status || TaskStatus.TODO,
+        columnId,
+        position: newPosition,
+      },
+      include: {
+        column: true,
       },
     });
 

@@ -32,6 +32,7 @@ export const TaskCard = ({ task, onUpdate, onDelete }: TaskCardProps) => {
       type: 'task',
       task,
     },
+    disabled: isEditing, // Disable dragging when editing
   });
 
   const style = {
@@ -63,11 +64,11 @@ export const TaskCard = ({ task, onUpdate, onDelete }: TaskCardProps) => {
     <Card
       ref={setNodeRef}
       style={style}
-      className={`cursor-grab active:cursor-grabbing transition-all duration-200 ${
+      className={`transition-all duration-200 ${
         isDragging ? 'opacity-50 rotate-3 scale-105' : 'hover:shadow-md'
-      }`}
+      } ${!isEditing ? 'cursor-grab active:cursor-grabbing' : ''}`}
       {...attributes}
-      {...listeners}
+      {...(!isEditing ? listeners : {})}
     >
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">

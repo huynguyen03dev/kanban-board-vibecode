@@ -10,21 +10,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Column {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#3B82F6") // Default blue color
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationship with tasks
+  tasks     Task[]
+
+  @@map("columns")
+}
+
 model Task {
   id          String   @id @default(cuid())
   title       String
   description String?
-  status      TaskStatus @default(TODO)
+  position    Int      @default(0) // Position within the column
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Foreign key relationship to column
+  columnId    String
+  column      Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
   @@map("tasks")
-}
-
-enum TaskStatus {
-  TODO
-  IN_PROGRESS
-  DONE
-
-  @@map("task_status")
 }

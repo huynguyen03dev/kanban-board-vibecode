@@ -8,17 +8,39 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  closestCenter,
 } from '@dnd-kit/core';
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { useState } from 'react';
 import { KanbanColumn } from './KanbanColumn';
 import { TaskCard } from './TaskCard';
+import { AddColumnButton } from './AddColumnButton';
 import { useKanbanBoard } from '@/hooks/useKanbanBoard';
-import { Task } from '@/types/kanban';
+import { Task, Column } from '@/types/kanban';
 
 export const KanbanBoard = () => {
-  const { board, loading, error, addTask, updateTask, deleteTask, moveTask, refetch } = useKanbanBoard();
+  const {
+    board,
+    loading,
+    error,
+    addTask,
+    updateTask,
+    deleteTask,
+    moveTask,
+    addColumn,
+    updateColumn,
+    deleteColumn,
+    reorderColumns,
+    refetch
+  } = useKanbanBoard();
+
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [activeColumn, setActiveColumn] = useState<Column | null>(null);
+
+
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -30,44 +52,91 @@ export const KanbanBoard = () => {
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const task = active.data.current?.task;
-    if (task) {
-      setActiveTask(task);
+
+    if (active.data.current?.type === 'task') {
+      const task = active.data.current?.task;
+      if (task) {
+        setActiveTask(task);
+      }
+    } else if (active.data.current?.type === 'column') {
+      const column = active.data.current?.column;
+      if (column) {
+        setActiveColumn(column);
+      }
     }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveTask(null);
+    setActiveColumn(null);
 
     if (!over) return;
 
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    // Find the task being dragged
-    const activeTask = board.columns
-      .flatMap(col => col.tasks)
-      .find(task => task.id === activeId);
+    // Handle column reordering
+    if (active.data.current?.type === 'column' && over.data.current?.type === 'column') {
+      if (activeId !== overId) {
+        const oldIndex = board.columns.findIndex(col => col.id === activeId);
+        const newIndex = board.columns.findIndex(col => col.id === overId);
 
-    if (!activeTask) return;
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const newColumnOrder = [...board.columns];
+          const [movedColumn] = newColumnOrder.splice(oldIndex, 1);
+          newColumnOrder.splice(newIndex, 0, movedColumn);
 
-    // Find the source column
-    const sourceColumn = board.columns.find(col =>
-      col.tasks.some(task => task.id === activeId)
-    );
+          reorderColumns(newColumnOrder.map(col => col.id));
+        }
+      }
+      return;
+    }
 
-    // Find the target column
-    const targetColumn = board.columns.find(col => col.id === overId);
+    // Handle task movement (existing logic)
+    if (active.data.current?.type === 'task') {
+      // Find the task being dragged
+      const activeTask = board.columns
+        .flatMap(col => col.tasks)
+        .find(task => task.id === activeId);
 
-    if (!sourceColumn || !targetColumn) return;
+      if (!activeTask) return;
 
-    // If dropping in the same column, do nothing for now
-    // (we could implement reordering within column here)
-    if (sourceColumn.id === targetColumn.id) return;
+      // Find the source column
+      const sourceColumn = board.columns.find(col =>
+        col.tasks.some(task => task.id === activeId)
+      );
 
-    // Move task to new column
-    moveTask(activeId, sourceColumn.id, targetColumn.id);
+      if (!sourceColumn) return;
+
+      // Determine the target column
+      let targetColumn = null;
+
+      // Check if we're dropping on a column directly
+      if (over.data.current?.type === 'column') {
+        targetColumn = board.columns.find(col => col.id === overId);
+      } else {
+        // If dropping on a task, find which column that task belongs to
+        const targetTask = board.columns
+          .flatMap(col => col.tasks)
+          .find(task => task.id === overId);
+
+        if (targetTask) {
+          targetColumn = board.columns.find(col =>
+            col.tasks.some(task => task.id === targetTask.id)
+          );
+        }
+      }
+
+      if (!targetColumn) return;
+
+      // If dropping in the same column, do nothing for now
+      // (we could implement reordering within column here)
+      if (sourceColumn.id === targetColumn.id) return;
+
+      // Move task to new column
+      moveTask(activeId, sourceColumn.id, targetColumn.id);
+    }
   };
 
   if (loading) {
@@ -115,20 +184,30 @@ export const KanbanBoard = () => {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={closestCenter}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 overflow-x-auto pb-6">
-            {board.columns.map((column) => (
-              <KanbanColumn
-                key={column.id}
-                column={column}
-                onAddTask={addTask}
-                onUpdateTask={updateTask}
-                onDeleteTask={deleteTask}
-              />
-            ))}
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 overflow-x-auto pb-6 min-h-[400px]">
+            <SortableContext
+              items={board.columns.map(col => col.id)}
+              strategy={horizontalListSortingStrategy}
+            >
+              {board.columns.map((column) => (
+                <KanbanColumn
+                  key={column.id}
+                  column={column}
+                  onAddTask={addTask}
+                  onUpdateTask={updateTask}
+                  onDeleteTask={deleteTask}
+                  onUpdateColumn={updateColumn}
+                  onDeleteColumn={deleteColumn}
+                  isDragging={activeColumn?.id === column.id}
+                />
+              ))}
+            </SortableContext>
+
+            <AddColumnButton onAddColumn={addColumn} />
           </div>
 
           <DragOverlay>
@@ -138,6 +217,18 @@ export const KanbanBoard = () => {
                   task={activeTask}
                   onUpdate={() => {}}
                   onDelete={() => {}}
+                />
+              </div>
+            ) : activeColumn ? (
+              <div className="rotate-1 scale-105">
+                <KanbanColumn
+                  column={activeColumn}
+                  onAddTask={() => Promise.resolve()}
+                  onUpdateTask={() => Promise.resolve()}
+                  onDeleteTask={() => Promise.resolve()}
+                  onUpdateColumn={() => Promise.resolve()}
+                  onDeleteColumn={() => Promise.resolve()}
+                  isDragging={true}
                 />
               </div>
             ) : null}

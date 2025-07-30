@@ -1,19 +1,13 @@
-import { Task as PrismaTask, TaskStatus } from '@prisma/client';
+import { Task as PrismaTask, Column as PrismaColumn } from '@prisma/client';
 
 export type Task = PrismaTask;
+export type Column = PrismaColumn & { tasks: Task[] };
 
-export type TaskStatusType = TaskStatus;
-
-export interface Column {
-  id: string;
-  title: string;
-  status: TaskStatus;
-  tasks: Task[];
-}
-
-export interface KanbanBoard {
+export interface KanbanBoardData {
   columns: Column[];
 }
+
+
 
 export type DragEndEvent = {
   active: {

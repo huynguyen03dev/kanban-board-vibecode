@@ -2,19 +2,24 @@
 
 import { useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TaskCard } from './TaskCard';
+import { ColumnHeader } from './ColumnHeader';
 import { Column, Task } from '@/types/kanban';
 import { Plus, X } from 'lucide-react';
 
 interface KanbanColumnProps {
   column: Column;
-  onAddTask: (columnId: string, title: string, description?: string) => void;
-  onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
-  onDeleteTask: (taskId: string) => void;
+  onAddTask: (columnId: string, title: string, description?: string) => Promise<void>;
+  onUpdateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
+  onDeleteTask: (taskId: string) => Promise<void>;
+  onUpdateColumn: (columnId: string, updates: { name?: string; color?: string }) => Promise<void>;
+  onDeleteColumn: (columnId: string) => Promise<void>;
+  isDragging?: boolean;
 }
 
 export const KanbanColumn = ({
@@ -22,11 +27,30 @@ export const KanbanColumn = ({
   onAddTask,
   onUpdateTask,
   onDeleteTask,
+  onUpdateColumn,
+  onDeleteColumn,
+  isDragging = false,
 }: KanbanColumnProps) => {
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
 
-  const { setNodeRef, isOver } = useDroppable({
+  // Make the column sortable for drag and drop reordering
+  const {
+    attributes: sortableAttributes,
+    listeners: sortableListeners,
+    setNodeRef: setSortableNodeRef,
+    transform: sortableTransform,
+    transition: sortableTransition,
+  } = useSortable({
+    id: column.id,
+    data: {
+      type: 'column',
+      column,
+    },
+  });
+
+  // Make the column droppable for tasks
+  const { setNodeRef: setDroppableNodeRef, isOver } = useDroppable({
     id: column.id,
     data: {
       type: 'column',
@@ -34,11 +58,26 @@ export const KanbanColumn = ({
     },
   });
 
-  const handleAddTask = () => {
+  // Combine the refs
+  const setNodeRef = (node: HTMLElement | null) => {
+    setSortableNodeRef(node);
+    setDroppableNodeRef(node);
+  };
+
+  const sortableStyle = {
+    transform: CSS.Transform.toString(sortableTransform),
+    transition: sortableTransition,
+  };
+
+  const handleAddTask = async () => {
     if (newTaskTitle.trim()) {
-      onAddTask(column.id, newTaskTitle.trim());
-      setNewTaskTitle('');
-      setIsAddingTask(false);
+      try {
+        await onAddTask(column.id, newTaskTitle.trim());
+        setNewTaskTitle('');
+        setIsAddingTask(false);
+      } catch (error) {
+        // Error handling is done in the parent component
+      }
     }
   };
 
@@ -51,63 +90,75 @@ export const KanbanColumn = ({
     }
   };
 
-  const getColumnColor = (status: string) => {
-    switch (status) {
-      case 'TODO':
-        return 'border-blue-200 bg-blue-50/50';
-      case 'IN_PROGRESS':
-        return 'border-yellow-200 bg-yellow-50/50';
-      case 'DONE':
-        return 'border-green-200 bg-green-50/50';
-      default:
-        return 'border-gray-200 bg-gray-50/50';
-    }
+  const getColumnColor = (color: string) => {
+    // Convert hex to RGB and create a lighter background
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+
+    return {
+      borderColor: `rgba(${r}, ${g}, ${b}, 0.3)`,
+      backgroundColor: `rgba(${r}, ${g}, ${b}, 0.05)`,
+    };
   };
 
-  const getHeaderColor = (status: string) => {
-    switch (status) {
-      case 'TODO':
-        return 'text-blue-700 bg-blue-100';
-      case 'IN_PROGRESS':
-        return 'text-yellow-700 bg-yellow-100';
-      case 'DONE':
-        return 'text-green-700 bg-green-100';
-      default:
-        return 'text-gray-700 bg-gray-100';
-    }
-  };
+  const columnStyle = getColumnColor(column.color);
 
   return (
-    <Card className={`w-full sm:w-80 h-fit ${getColumnColor(column.status)} transition-colors duration-200`}>
-      <CardHeader className={`rounded-t-lg ${getHeaderColor(column.status)}`}>
-        <CardTitle className="flex items-center justify-between text-sm font-semibold">
-          <span>{column.title}</span>
-          <span className="text-xs font-normal opacity-70">
-            {column.tasks.length}
-          </span>
-        </CardTitle>
-      </CardHeader>
+    <Card
+      ref={setNodeRef}
+      className={`w-full lg:w-80 min-w-[280px] h-fit transition-colors duration-200 border-2 group ${
+        isDragging ? 'opacity-50 rotate-1 scale-105' : ''
+      }`}
+      style={{ ...columnStyle, ...sortableStyle }}
+      {...sortableAttributes}
+      {...sortableListeners}
+    >
+      <ColumnHeader
+        column={column}
+        onUpdateColumn={onUpdateColumn}
+        onDeleteColumn={onDeleteColumn}
+        isDragging={isDragging}
+      />
       <CardContent className="p-3">
         <div
           ref={setNodeRef}
-          className={`min-h-[150px] sm:min-h-[200px] space-y-3 transition-colors duration-200 rounded-lg p-2 ${
-            isOver ? 'bg-primary/10 border-2 border-dashed border-primary' : ''
+          className={`min-h-[150px] sm:min-h-[200px] transition-colors duration-200 rounded-lg p-3 ${
+            isOver ? 'bg-primary/10 border-2 border-dashed border-primary' : 'border-2 border-transparent'
           }`}
         >
-          <SortableContext
-            items={column.tasks.map(task => task.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            {column.tasks.map((task) => (
-              <div key={task.id} className="group">
-                <TaskCard
-                  task={task}
-                  onUpdate={onUpdateTask}
-                  onDelete={onDeleteTask}
-                />
-              </div>
-            ))}
-          </SortableContext>
+          {/* Tasks container */}
+          <div className="space-y-3">
+            <SortableContext
+              items={column.tasks.map(task => task.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {column.tasks.map((task) => (
+                <div key={task.id} className="group">
+                  <TaskCard
+                    task={task}
+                    onUpdate={onUpdateTask}
+                    onDelete={onDeleteTask}
+                  />
+                </div>
+              ))}
+            </SortableContext>
+          </div>
+
+          {/* Drop zone indicator when dragging over */}
+          {isOver && column.tasks.length > 0 && (
+            <div className="mt-3 h-8 border-2 border-dashed border-primary/50 rounded-md bg-primary/5 flex items-center justify-center">
+              <span className="text-xs text-primary/70 font-medium">Drop here</span>
+            </div>
+          )}
+
+          {/* Empty state message */}
+          {column.tasks.length === 0 && !isOver && (
+            <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+              No tasks yet
+            </div>
+          )}
 
           {isAddingTask ? (
             <Card className="border-dashed border-2 border-primary/30">
