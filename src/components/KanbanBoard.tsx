@@ -223,7 +223,7 @@ export const KanbanBoard = () => {
                 <TaskCard
                   task={activeTask}
                   onUpdate={() => {}}
-                  onDelete={() => {}}
+                  onDelete={() => Promise.resolve()}
                 />
               </div>
             ) : activeColumn ? (

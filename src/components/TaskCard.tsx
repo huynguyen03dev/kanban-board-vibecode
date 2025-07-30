@@ -6,18 +6,21 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Task } from '@/types/kanban';
 import { Trash2, Edit3, Check, X } from 'lucide-react';
 
 interface TaskCardProps {
   task: Task;
   onUpdate: (taskId: string, updates: Partial<Task>) => void;
-  onDelete: (taskId: string) => void;
+  onDelete: (taskId: string) => Promise<void>;
 }
 
 export const TaskCard = ({ task, onUpdate, onDelete }: TaskCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const {
     attributes,
@@ -60,8 +63,22 @@ export const TaskCard = ({ task, onUpdate, onDelete }: TaskCardProps) => {
     }
   };
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onDelete(task.id);
+      setShowDeleteDialog(false);
+    } catch (error) {
+      // Error handling is managed by the parent component
+      console.error('Failed to delete task:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
-    <Card
+    <>
+      <Card
       ref={setNodeRef}
       style={style}
       className={`transition-all duration-200 ${
@@ -120,7 +137,7 @@ export const TaskCard = ({ task, onUpdate, onDelete }: TaskCardProps) => {
                   variant="ghost"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDelete(task.id);
+                    setShowDeleteDialog(true);
                   }}
                   className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
                 >
@@ -137,5 +154,41 @@ export const TaskCard = ({ task, onUpdate, onDelete }: TaskCardProps) => {
         </CardContent>
       )}
     </Card>
+
+    <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Delete Task</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete the task "{task.title}"?
+          </p>
+          <p className="text-xs text-muted-foreground">
+            This action cannot be undone.
+          </p>
+
+          <div className="flex gap-2 pt-4">
+            <Button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              variant="destructive"
+              className="flex-1"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Task'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
